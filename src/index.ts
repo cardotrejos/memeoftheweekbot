@@ -22,7 +22,15 @@ const client = new Client({
         GatewayIntentBits.GuildMessageReactions,
     ],
 });
-const REACTION_EMOJI = '🤣';
+const REACTION_EMOJIS = [
+    '🤣',
+    '😂',
+    '974777892418519081',
+    '956966036354265180',
+    '954075635310035024',
+    '930549056466485298',
+];
+
 const START_CONTEST_COMMAND = 'startcontest';
 const WINNER_COMMAND = 'winner';
 
@@ -93,7 +101,7 @@ async function handleMessageReaction(
     if (
         reaction.message.channel.id === process.env.MEME_CHANNEL_ID &&
         reaction.message.channel instanceof TextChannel &&
-        reaction.emoji.name === REACTION_EMOJI &&
+        REACTION_EMOJIS?.includes(reaction.emoji.name ?? '') &&
         contestManager.isContestRunning()
     ) {
         const currentReactions = contestManager.memeLeaderboard.get(reaction.message.id) || 0;
