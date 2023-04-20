@@ -22,7 +22,7 @@ const client = new Client({
         GatewayIntentBits.GuildMessageReactions,
     ],
 });
-const REACTION_EMOJIS = ['🤣', '😂', '930549056466485298', '889670198934794240', '954075635310035024'];
+const REACTION_EMOJIS = ['🤣', '😂'];
 const START_CONTEST_COMMAND = 'startcontest';
 const WINNER_COMMAND = 'winner';
 
