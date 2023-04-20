@@ -1,40 +1,40 @@
 {
-  "name": "memebot",
-  "version": "1.0.0",
-  "main": "index.js",
-  "license": "MIT",
-  "exports": [
-    "./dist/index.js"
-  ],
-  "scripts": {
-    "lint": "eslint . --cache --ext .js,.jsx,.ts,.tsx",
-    "lint:fix": "eslint . --fix --cache --ext .js,.jsx,.ts,.tsx",
-    "format": "prettier --check .",
-    "format:fix": "prettier --write .",
-    "clean": "git clean -xdf --exclude=\"/config/**/*\"",
-    "clean:dry": "git clean -xdf --exclude=\"/config/**/*\" --dry-run",
-    "build": "tsc --project tsconfig.json",
-    "start": "npm run start:bot",
-    "start:bot": "npm run build && node --enable-source-maps dist/index.js"
-  },
-  "devDependencies": {
-    "@types/node": "^18.15.11",
-    "@types/node-cron": "^3.0.7",
-    "@typescript-eslint/eslint-plugin": "^5.58.0",
-    "@typescript-eslint/parser": "^5.58.0",
-    "eslint": "^8.38.0",
-    "eslint-plugin-import": "^2.27.5",
-    "eslint-plugin-unicorn": "^46.0.0",
-    "prettier": "^2.8.7",
-    "typescript": "^5.0.4"
-  },
-  "dependencies": {
-    "@discordjs/builders": "^1.6.1",
-    "@discordjs/rest": "^1.7.0",
-    "dayjs": "^1.11.7",
-    "discord-api-types": "^0.37.39",
-    "discord.js": "^14.9.0",
-    "dotenv": "^16.0.3",
-    "ts-node": "^10.9.1"
-  }
+    "name": "memebot",
+    "version": "1.0.0",
+    "main": "index.js",
+    "license": "MIT",
+    "exports": [
+        "./dist/index.js"
+    ],
+    "scripts": {
+        "lint": "eslint . --cache --ext .js,.jsx,.ts,.tsx",
+        "lint:fix": "eslint . --fix --cache --ext .js,.jsx,.ts,.tsx",
+        "format": "prettier --check .",
+        "format:fix": "prettier --write .",
+        "clean": "git clean -xdf --exclude=\"/config/**/*\"",
+        "clean:dry": "git clean -xdf --exclude=\"/config/**/*\" --dry-run",
+        "build": "tsc --project tsconfig.json",
+        "start": "npx ts-node register-commands.ts && npm run start:bot",
+        "start:bot": "npm run build && node --enable-source-maps dist/index.js"
+    },
+    "devDependencies": {
+        "@types/node": "^18.15.11",
+        "@types/node-cron": "^3.0.7",
+        "@typescript-eslint/eslint-plugin": "^5.58.0",
+        "@typescript-eslint/parser": "^5.58.0",
+        "eslint": "^8.38.0",
+        "eslint-plugin-import": "^2.27.5",
+        "eslint-plugin-unicorn": "^46.0.0",
+        "prettier": "^2.8.7",
+        "typescript": "^5.0.4"
+    },
+    "dependencies": {
+        "@discordjs/builders": "^1.6.1",
+        "@discordjs/rest": "^1.7.0",
+        "dayjs": "^1.11.7",
+        "discord-api-types": "^0.37.39",
+        "discord.js": "^14.9.0",
+        "dotenv": "^16.0.3",
+        "ts-node": "^10.9.1"
+    }
 }
