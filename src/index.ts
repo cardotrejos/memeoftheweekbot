@@ -121,7 +121,7 @@ async function announceWinner(winnerMessage: Message, reactions: number): Promis
     const announcementChannel = winnerMessage.channel as TextChannel;
 
     const messageOptions: MessageOptions = {
-        content: `🎉 Congratulations, ${winnerMessage.author}! Your meme has won the "Meme of the Week" prize with ${reactions} reactions! 🎉`,
+        content: `🎉 Felicitaciones, ${winnerMessage.author}! Tu post ha ganado el premio al "Meme de la semana" con ${reactions} reacciones. #LaPlazaRulez! 🎉`,
     };
 
     const attachmentUrl = winnerMessage.attachments.first()?.url;
