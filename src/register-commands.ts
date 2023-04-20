@@ -26,7 +26,7 @@ const rest = new REST({ version: '9' }).setToken(token);
         console.log('Started refreshing slash commands.');
 
         await rest.put(
-            Routes.applicationGuildCommands('1097503132067565634', '1097502838780854432'),
+            Routes.applicationGuildCommands('914582747325030510', '1097502838780854432'),
             {
                 body: commands,
             }
