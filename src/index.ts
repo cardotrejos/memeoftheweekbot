@@ -101,7 +101,8 @@ async function handleMessageReaction(
     if (
         reaction.message.channel.id === process.env.MEME_CHANNEL_ID &&
         reaction.message.channel instanceof TextChannel &&
-        REACTION_EMOJIS?.includes(reaction.emoji.name ?? '') &&
+        (REACTION_EMOJIS?.includes(reaction.emoji.name ?? '') ||
+            REACTION_EMOJIS?.includes(reaction.emoji.id ?? '')) &&
         contestManager.isContestRunning()
     ) {
         const currentReactions = contestManager.memeLeaderboard.get(reaction.message.id) || 0;
