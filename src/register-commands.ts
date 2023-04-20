@@ -3,12 +3,24 @@ import { REST } from '@discordjs/rest';
 import { Routes } from 'discord-api-types/v9';
 import * as dotenv from 'dotenv';
 
-dotenv.config();
+dotenv.config({ path: '../.env' });
 
-const token = process?.env?.DISCORD_BOT_TOKEN;
+const token = process.env.DISCORD_BOT_TOKEN;
+const clientId = process.env.CLIENT_ID;
+const guildId = process.env.GUILD_ID;
 
 if (!token) {
     console.error('Error: DISCORD_BOT_TOKEN not found in environment variables.');
+    process.exit(1);
+}
+
+if (!clientId) {
+    console.error('Error: CLIENT_ID not found in environment variables.');
+    process.exit(1);
+}
+
+if (!guildId) {
+    console.error('Error: GUILD_ID not found in environment variables.');
     process.exit(1);
 }
 
@@ -25,12 +37,9 @@ const rest = new REST({ version: '9' }).setToken(token);
     try {
         console.log('Started refreshing slash commands.');
 
-        await rest.put(
-            Routes.applicationGuildCommands('914582747325030510', '1097502838780854432'),
-            {
-                body: commands,
-            }
-        );
+        await rest.put(Routes.applicationGuildCommands(clientId, guildId), {
+            body: commands,
+        });
 
         console.log('Successfully reloaded slash commands.');
     } catch (error) {
