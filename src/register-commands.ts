@@ -25,10 +25,10 @@ if (!guildId) {
 }
 
 const commands = [
-    new SlashCommandBuilder().setName('startcontest').setDescription('Start the meme contest'),
+    new SlashCommandBuilder().setName('startcontest').setDescription('Comienza el concurso de memes'),
     new SlashCommandBuilder()
         .setName('winner')
-        .setDescription('Announce the winner of the meme contest'),
+        .setDescription('Anuncia el ganador del concurso de memes, contando las reacciones predefinidas'),
 ].map(command => command.toJSON());
 
 const rest = new REST({ version: '9' }).setToken(token);
