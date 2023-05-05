@@ -3,7 +3,6 @@ import isBetween from 'dayjs/plugin/isBetween';
 import {
     Client,
     GatewayIntentBits,
-    Message,
     MessageReaction,
     PartialMessageReaction,
     PartialUser,
@@ -71,17 +70,12 @@ client.on('interactionCreate', async interaction => {
             contestManager.startContest();
             await interaction.reply('Meme contest started!');
         } else if (commandName === WINNER_COMMAND) {
-            const winner = getMemeWinner();
-            if (winner) {
-                const winnerMessage = await interaction.channel?.messages.fetch(winner.messageId);
-                if (winnerMessage) {
-                    await announceWinner(winnerMessage, winner.reactions);
-                    await interaction.reply('Winner announced!');
-                } else {
-                    await interaction.reply('Winner message not found.');
-                }
+            const winners = getTopMemes(3);
+            if (winners.length > 0) {
+                await announceWinner(winners);
+                await interaction.reply('Winners announced!');
             } else {
-                await interaction.reply('No winner found for this week.');
+                await interaction.reply('No winners found for this week.');
             }
         }
     } catch (error) {
@@ -110,15 +104,14 @@ async function handleMessageReaction(
     }
 }
 
-function getMemeWinner(): { messageId: string; reactions: number } | null {
-    let winner: { messageId: string; reactions: number } | null = null;
+function getTopMemes(top: number): { messageId: string; reactions: number }[] {
+    const sortedLeaderboard = Array.from(contestManager.memeLeaderboard.entries()).sort(
+        (a, b) => b[1] - a[1]
+    );
 
-    for (const [messageId, reactions] of contestManager.memeLeaderboard.entries()) {
-        if (!winner || reactions > winner.reactions) {
-            winner = { messageId, reactions };
-        }
-    }
-    return winner;
+    return sortedLeaderboard
+        .slice(0, top)
+        .map(entry => ({ messageId: entry[0], reactions: entry[1] }));
 }
 
 interface MessageOptions {
@@ -126,18 +119,33 @@ interface MessageOptions {
     files?: string[];
 }
 
-async function announceWinner(winnerMessage: Message, reactions: number): Promise<void> {
-    const announcementChannel = winnerMessage.channel as TextChannel;
-
-    const messageOptions: MessageOptions = {
-        content: `🎉 Felicitaciones, ${winnerMessage.author}! Tu post ha ganado el premio al "Meme de la semana" con ${reactions} reacciones. #LaPlazaRulez! 🎉`,
-    };
-
-    const attachmentUrl = winnerMessage.attachments.first()?.url;
-
-    if (attachmentUrl) {
-        messageOptions['files'] = [attachmentUrl];
+async function announceWinner(winners: { messageId: string; reactions: number }[]): Promise<void> {
+    if (!process.env.MEME_CHANNEL_ID) {
+        console.error('MEME_CHANNEL_ID is not set in the environment variables');
+        return;
     }
 
-    await announcementChannel.send(messageOptions);
+    const announcementChannel = (await client.channels.fetch(
+        process.env.MEME_CHANNEL_ID
+    )) as TextChannel;
+
+    for (const [index, winner] of winners.entries()) {
+        const winnerMessage = await announcementChannel.messages.fetch(winner.messageId);
+        const winnerLink = winnerMessage.url;
+        const messageOptions: MessageOptions = {
+            content: `🎉 Felicitaciones, ${winnerMessage.author}! Tu post ha ganado el #${
+                index + 1
+            } spot premio al "Meme de la semana" con ${
+                winner.reactions
+            } reacciones. #LaPlazaRulez!. Here's the link to your winning post: ${winnerLink} 🎉`,
+        };
+
+        const attachmentUrl = winnerMessage.attachments.first()?.url;
+
+        if (attachmentUrl) {
+            messageOptions['files'] = [attachmentUrl];
+        }
+
+        await announcementChannel.send(messageOptions);
+    }
 }
