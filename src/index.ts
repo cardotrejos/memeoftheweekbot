@@ -68,12 +68,12 @@ client.on('interactionCreate', async interaction => {
     try {
         if (commandName === START_CONTEST_COMMAND) {
             contestManager.startContest();
-            await interaction.reply('Meme contest started!');
+            await interaction.reply('El concurso ha comenzado!');
         } else if (commandName === WINNER_COMMAND) {
             const winners = getTopMemes(3);
             if (winners.length > 0) {
                 await announceWinner(winners);
-                await interaction.reply('Winners announced!');
+                await interaction.reply('Ganadores anunciados!');
             } else {
                 await interaction.reply('No winners found for this week.');
             }
@@ -135,9 +135,9 @@ async function announceWinner(winners: { messageId: string; reactions: number }[
         const messageOptions: MessageOptions = {
             content: `🎉 Felicitaciones, ${winnerMessage.author}! Tu post ha ganado el #${
                 index + 1
-            } spot premio al "Meme de la semana" con ${
+            } puesto al "Meme de la semana" con ${
                 winner.reactions
-            } reacciones. #LaPlazaRulez!. Here's the link to your winning post: ${winnerLink} 🎉`,
+            } reacciones. #LaPlazaRulez!. Link: ${winnerLink} 🎉`,
         };
 
         const attachmentUrl = winnerMessage.attachments.first()?.url;
