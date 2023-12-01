@@ -2,6 +2,7 @@ import dayjs from 'dayjs';
 import isBetween from 'dayjs/plugin/isBetween';
 import {
     Client,
+    Events,
     GatewayIntentBits,
     MessageReaction,
     PartialMessageReaction,
@@ -63,7 +64,7 @@ client.once('ready', () => {
     console.log('Bot is ready!');
 });
 
-client.on('interactionCreate', async interaction => {
+client.on(Events.InteractionCreate, async interaction => {
     if (!interaction.isCommand()) return;
 
     const { commandName } = interaction;
@@ -94,7 +95,7 @@ client.on('interactionCreate', async interaction => {
     }
 });
 
-client.on('messageReactionAdd', handleMessageReaction);
+client.on(Events.MessageReactionAdd, handleMessageReaction);
 
 async function handleMessageReaction(reaction: MessageReaction | PartialMessageReaction,
         user: User | PartialUser): Promise<void>{
