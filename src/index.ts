@@ -75,8 +75,8 @@ client.on(Events.InteractionCreate, async interaction => {
             await interaction.reply('El concurso ha comenzado!');
         } else if (commandName === WINNER_COMMAND) {
             const winners = getSortedLeaderboard(3, contestManager.memeLeaderboard);
-            const bones = getSortedLeaderboard(2, contestManager.boneLeaderboard);
-            if(winners.length > 0 && bones.length > 0 ){
+            const bones = getSortedLeaderboard(3, contestManager.boneLeaderboard);
+            if(winners.length == 0 && bones.length == 0 ){
                 await interaction.reply('No winners found for this week.');
             }
             else{
