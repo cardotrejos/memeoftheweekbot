@@ -18,6 +18,7 @@
         "start:bot": "npm run build && node --enable-source-maps dist/index.js"
     },
     "devDependencies": {
+        "@types/better-sqlite3": "^7.6.10",
         "@types/node": "^18.15.11",
         "@types/node-cron": "^3.0.7",
         "@typescript-eslint/eslint-plugin": "^5.58.0",
@@ -31,10 +32,12 @@
     "dependencies": {
         "@discordjs/builders": "^1.6.1",
         "@discordjs/rest": "^1.7.0",
+        "better-sqlite3": "^11.0.0",
         "dayjs": "^1.11.7",
         "discord-api-types": "^0.37.39",
         "discord.js": "^14.9.0",
         "dotenv": "^16.0.3",
+        "sqlite3": "^5.1.7",
         "ts-node": "^10.9.1"
     }
 }

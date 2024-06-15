@@ -12,6 +12,14 @@ import {
 } from 'discord.js';
 import * as dotenv from 'dotenv';
 
+import {
+    getCurrentContest,
+    getLeaderboard,
+    removeReaction,
+    saveContest,
+    saveReaction
+} from './database';
+
 dotenv.config();
 
 dayjs.extend(isBetween);
@@ -38,23 +46,15 @@ const WINNER_COMMAND = 'winner';
 client.login(process.env.DISCORD_BOT_TOKEN);
 
 class ContestManager {
-    contestStartDate: dayjs.Dayjs | null = null;
-    contestEndDate: dayjs.Dayjs | null = null;
-    memeLeaderboard: Map<string, Set<string>> = new Map();
-    boneLeaderboard: Map<string, Set<string>> = new Map();
-
     startContest(): void {
-        this.contestStartDate = dayjs();
-        this.contestEndDate = this.contestStartDate.add(7, 'day');
-        this.memeLeaderboard.clear();
-        this.boneLeaderboard.clear();
+        const startDate = dayjs().toISOString();
+        const endDate = dayjs().add(7, 'day').toISOString();
+        saveContest(startDate, endDate);
     }
 
     isContestRunning(): boolean {
-        if (!this.contestStartDate || !this.contestEndDate) {
-            return false;
-        }
-        return dayjs().isBetween(this.contestStartDate, this.contestEndDate);
+        const contest = getCurrentContest();
+        return contest ? dayjs().isBetween(contest.startDate, contest.endDate) : false;
     }
 }
 
@@ -74,20 +74,19 @@ client.on(Events.InteractionCreate, async interaction => {
             contestManager.startContest();
             await interaction.reply('El concurso ha comenzado!');
         } else if (commandName === WINNER_COMMAND) {
-            const winners = getSortedLeaderboard(3, contestManager.memeLeaderboard);
-            const bones = getSortedLeaderboard(3, contestManager.boneLeaderboard);
-            if(winners.length == 0 && bones.length == 0 ){
+            const winners = getSortedLeaderboard(3, 'meme');
+            const bones = getSortedLeaderboard(3, 'bone');
+            if (winners.length == 0 && bones.length == 0) {
                 await interaction.reply('No winners found for this week.');
-            }
-            else{
+            } else {
                 await interaction.reply('Ganadores anunciados!');
             }
             if (winners.length > 0) {
                 await announceWinner(winners, 'Meme de la semana');
-            } 
+            }
             if (bones.length > 0) {
                 await announceWinner(bones, 'Hueso de la semana');
-            } 
+            }
         }
     } catch (error) {
         console.error(error);
@@ -95,47 +94,21 @@ client.on(Events.InteractionCreate, async interaction => {
     }
 });
 
-client.on(Events.MessageReactionAdd, handleMessageReaction);
-client.on(Events.MessageReactionRemove, handleMessageReactionRemoved);
+client.on(Events.MessageReactionAdd, async (reaction, user) => {
+    await handleSpecificMessageReaction(reaction, user, LAUGH_EMOJIS, 'meme');
+    await handleSpecificMessageReaction(reaction, user, BONE_EMOJI, 'bone');
+});
 
-async function handleMessageReactionRemoved(reaction: MessageReaction | PartialMessageReaction,
-    user: User | PartialUser): Promise<void>{
-        handleSpecificMessageReactionRemoved(reaction, user, LAUGH_EMOJIS, contestManager.memeLeaderboard)
-        handleSpecificMessageReactionRemoved(reaction, user, BONE_EMOJI, contestManager.boneLeaderboard)
-    }
-async function handleSpecificMessageReactionRemoved(
-    reaction: MessageReaction | PartialMessageReaction,
-    user: User | PartialUser,
-    availableReactions: Array<string>,
-    leaderboard:  Map<string, Set<string>>,
-): Promise<void> {
-    if (user.bot) return;
-
-    if (
-        reaction.message.channel.id === process.env.MEME_CHANNEL_ID &&
-        reaction.message.channel instanceof TextChannel &&
-        (availableReactions?.includes(reaction.emoji.name ?? '') ||
-            availableReactions?.includes(reaction.emoji.id ?? '')) &&
-        contestManager.isContestRunning()
-    ) {
-        const currentReactions = leaderboard.get(reaction.message.id) || new Set();
-        currentReactions.delete(user.id)
-        leaderboard.set(reaction.message.id, currentReactions);
-    }
-}
-
-
-async function handleMessageReaction(reaction: MessageReaction | PartialMessageReaction,
-        user: User | PartialUser): Promise<void>{
-            handleSpecificMessageReaction(reaction, user, LAUGH_EMOJIS, contestManager.memeLeaderboard)
-            handleSpecificMessageReaction(reaction, user, BONE_EMOJI, contestManager.boneLeaderboard)
-        }
+client.on(Events.MessageReactionRemove, async (reaction, user) => {
+    await handleSpecificMessageReactionRemoved(reaction, user, LAUGH_EMOJIS, 'meme');
+    await handleSpecificMessageReactionRemoved(reaction, user, BONE_EMOJI, 'bone');
+});
 
 async function handleSpecificMessageReaction(
     reaction: MessageReaction | PartialMessageReaction,
     user: User | PartialUser,
     availableReactions: Array<string>,
-    leaderboard:  Map<string, Set<string>>,
+    type: string
 ): Promise<void> {
     if (user.bot) return;
 
@@ -146,20 +119,39 @@ async function handleSpecificMessageReaction(
             availableReactions?.includes(reaction.emoji.id ?? '')) &&
         contestManager.isContestRunning()
     ) {
-        const currentReactions = leaderboard.get(reaction.message.id) || new Set();
-        currentReactions.add(user.id)
-        leaderboard.set(reaction.message.id, currentReactions);
+        saveReaction(reaction.message.id, user.id, type);
     }
 }
 
-function getSortedLeaderboard(top: number, leaderboard: Map<string, Set<string>>): { messageId: string; reactions: number }[] {
-    const sortedLeaderboard = Array.from(leaderboard.entries()).sort(
-        (a, b) => b[1].size - a[1].size
-    );
+async function handleSpecificMessageReactionRemoved(
+    reaction: MessageReaction | PartialMessageReaction,
+    user: User | PartialUser,
+    availableReactions: Array<string>,
+    type: string
+): Promise<void> {
+    if (user.bot) return;
 
-    return sortedLeaderboard
+    if (
+        reaction.message.channel.id === process.env.MEME_CHANNEL_ID &&
+        reaction.message.channel instanceof TextChannel &&
+        (availableReactions?.includes(reaction.emoji.name ?? '') ||
+            availableReactions?.includes(reaction.emoji.id ?? '')) &&
+        contestManager.isContestRunning()
+    ) {
+        removeReaction(reaction.message.id, user.id, type);
+    }
+}
+
+function getSortedLeaderboard(
+    top: number,
+    type: string
+): { messageId: string; reactions: number }[] {
+    return getLeaderboard(type)
         .slice(0, top)
-        .map(entry => ({ messageId: entry[0], reactions: entry[1].size }));
+        .map(entry => ({
+            messageId: entry.messageId,
+            reactions: entry.count,
+        }));
 }
 
 interface MessageOptions {
@@ -167,7 +159,10 @@ interface MessageOptions {
     files?: string[];
 }
 
-async function announceWinner(winners: { messageId: string; reactions: number }[], contest: string): Promise<void> {
+async function announceWinner(
+    winners: { messageId: string; reactions: number }[],
+    contest: string
+): Promise<void> {
     if (!process.env.MEME_CHANNEL_ID) {
         console.error('MEME_CHANNEL_ID is not set in the environment variables');
         return;
