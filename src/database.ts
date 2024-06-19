@@ -1,65 +1,77 @@
-import Database from 'better-sqlite3';
+import { Pool } from 'pg';
 
-const db = new Database('memebot.db');
+// Use the connection URL provided by Railway
+const pool = new Pool({
+    connectionString: process.env.RAILWAY_DATABASE_URL,
+});
 
-db.prepare(
+pool.query(
     `
-    CREATE TABLE IF NOT EXISTS contests (
-        id INTEGER PRIMARY KEY,
-        start_date TEXT,
-        end_date TEXT
-    )
+  CREATE TABLE IF NOT EXISTS contests (
+      id SERIAL PRIMARY KEY,
+      start_date TEXT,
+      end_date TEXT
+  )
 `
-).run();
+);
 
-db.prepare(
+pool.query(
     `
-    CREATE TABLE IF NOT EXISTS reactions (
-        message_id TEXT,
-        user_id TEXT,
-        type TEXT,
-        UNIQUE(message_id, user_id, type)
-    )
+  CREATE TABLE IF NOT EXISTS reactions (
+      message_id TEXT,
+      user_id TEXT,
+      type TEXT,
+      UNIQUE(message_id, user_id, type)
+  )
 `
-).run();
+);
 
-export function saveContest(startDate: string, endDate: string): void {
-    db.prepare('INSERT INTO contests (start_date, end_date) VALUES (?, ?)').run(startDate, endDate);
+export async function saveContest(startDate: string, endDate: string): Promise<void> {
+    await pool.query('INSERT INTO contests (start_date, end_date) VALUES ($1, $2)', [
+        startDate,
+        endDate,
+    ]);
 }
 
-export function getCurrentContest(): { startDate: string; endDate: string } | null {
-    const row = db
-        .prepare('SELECT start_date, end_date FROM contests ORDER BY id DESC LIMIT 1')
-        .get() as { startDate: string; endDate: string } | null;
-    return row ? { startDate: row.startDate, endDate: row.endDate } : null;
+export async function getCurrentContest(): Promise<{ startDate: string; endDate: string } | null> {
+    const result = await pool.query(
+        'SELECT start_date, end_date FROM contests ORDER BY id DESC LIMIT 1'
+    );
+    const row = result.rows[0];
+    return row ? { startDate: row.start_date, endDate: row.end_date } : null;
 }
 
-export function saveReaction(messageId: string, userId: string, type: string): void {
-    db.prepare('INSERT OR IGNORE INTO reactions (message_id, user_id, type) VALUES (?, ?, ?)').run(
-        messageId,
-        userId,
-        type
+export async function saveReaction(messageId: string, userId: string, type: string): Promise<void> {
+    await pool.query(
+        'INSERT INTO reactions (message_id, user_id, type) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING',
+        [messageId, userId, type]
     );
 }
 
-export function removeReaction(messageId: string, userId: string, type: string): void {
-    db.prepare('DELETE FROM reactions WHERE message_id = ? AND user_id = ? AND type = ?').run(
+export async function removeReaction(
+    messageId: string,
+    userId: string,
+    type: string
+): Promise<void> {
+    await pool.query('DELETE FROM reactions WHERE message_id = $1 AND user_id = $2 AND type = $3', [
         messageId,
         userId,
-        type
-    );
+        type,
+    ]);
 }
 
-export function getLeaderboard(type: string): { messageId: string; count: number }[] {
-    return db
-        .prepare(
-            `
-        SELECT message_id, COUNT(*) as count
-        FROM reactions
-        WHERE type = ?
-        GROUP BY message_id
-        ORDER BY count DESC
-    `
-        )
-        .all(type) as { messageId: string; count: number }[];
+export async function getLeaderboard(
+    type: string
+): Promise<{ messageId: string; count: number }[]> {
+    const result = await pool.query(
+        `
+    SELECT message_id, COUNT(*) as count
+    FROM reactions
+    WHERE type = $1
+    GROUP BY message_id
+    ORDER BY count DESC
+  `,
+        [type]
+    );
+    return result.rows.map(row => ({ messageId: row.message_id, count: row.count }));
 }

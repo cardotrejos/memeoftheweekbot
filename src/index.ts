@@ -52,8 +52,8 @@ class ContestManager {
         saveContest(startDate, endDate);
     }
 
-    isContestRunning(): boolean {
-        const contest = getCurrentContest();
+    async isContestRunning(): Promise<boolean> {
+        const contest = await getCurrentContest();
         return contest ? dayjs().isBetween(contest.startDate, contest.endDate) : false;
     }
 }
@@ -74,8 +74,8 @@ client.on(Events.InteractionCreate, async interaction => {
             contestManager.startContest();
             await interaction.reply('El concurso ha comenzado!');
         } else if (commandName === WINNER_COMMAND) {
-            const winners = getSortedLeaderboard(3, 'meme');
-            const bones = getSortedLeaderboard(3, 'bone');
+            const winners = await getSortedLeaderboard(3, 'meme');
+            const bones = await getSortedLeaderboard(3, 'bone');
             if (winners.length == 0 && bones.length == 0) {
                 await interaction.reply('No winners found for this week.');
             } else {
@@ -117,7 +117,7 @@ async function handleSpecificMessageReaction(
         reaction.message.channel instanceof TextChannel &&
         (availableReactions?.includes(reaction.emoji.name ?? '') ||
             availableReactions?.includes(reaction.emoji.id ?? '')) &&
-        contestManager.isContestRunning()
+        await contestManager.isContestRunning()
     ) {
         saveReaction(reaction.message.id, user.id, type);
     }
@@ -136,22 +136,25 @@ async function handleSpecificMessageReactionRemoved(
         reaction.message.channel instanceof TextChannel &&
         (availableReactions?.includes(reaction.emoji.name ?? '') ||
             availableReactions?.includes(reaction.emoji.id ?? '')) &&
-        contestManager.isContestRunning()
+        await contestManager.isContestRunning()
     ) {
         removeReaction(reaction.message.id, user.id, type);
     }
 }
 
-function getSortedLeaderboard(
+async function getSortedLeaderboard(
     top: number,
     type: string
-): { messageId: string; reactions: number }[] {
-    return getLeaderboard(type)
-        .slice(0, top)
+): Promise<{ messageId: string; reactions: number }[]> {
+    const leaderboard = await getLeaderboard(type);
+
+    const sortedLeaderboard = leaderboard.slice(0, top)
         .map(entry => ({
             messageId: entry.messageId,
             reactions: entry.count,
         }));
+
+    return sortedLeaderboard;
 }
 
 interface MessageOptions {
