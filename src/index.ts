@@ -17,7 +17,7 @@ import {
     getLeaderboard,
     removeReaction,
     saveContest,
-    saveReaction
+    saveReaction,
 } from './database';
 
 dotenv.config();
@@ -38,7 +38,7 @@ const LAUGH_EMOJIS = [
     '954075635310035024',
     '930549056466485298',
 ];
-const BONE_EMOJI = ['🦴']
+const BONE_EMOJI = ['🦴'];
 
 const START_CONTEST_COMMAND = 'startcontest';
 const WINNER_COMMAND = 'winner';
@@ -52,9 +52,14 @@ class ContestManager {
         saveContest(startDate, endDate);
     }
 
-    async isContestRunning(): Promise<boolean> {
+    async runningContest(): Promise<
+        { id: number; startDate: string; endDate: string } | undefined
+    > {
         const contest = await getCurrentContest();
-        return contest ? dayjs().isBetween(contest.startDate, contest.endDate) : false;
+        if (contest && dayjs().isBetween(contest.startDate, contest.endDate)) {
+            return contest;
+        }
+        return undefined;
     }
 }
 
@@ -112,14 +117,15 @@ async function handleSpecificMessageReaction(
 ): Promise<void> {
     if (user.bot) return;
 
+    const runningContest = await contestManager.runningContest();
     if (
         reaction.message.channel.id === process.env.MEME_CHANNEL_ID &&
         reaction.message.channel instanceof TextChannel &&
         (availableReactions?.includes(reaction.emoji.name ?? '') ||
             availableReactions?.includes(reaction.emoji.id ?? '')) &&
-        await contestManager.isContestRunning()
+        runningContest
     ) {
-        saveReaction(reaction.message.id, user.id, type);
+        saveReaction(reaction.message.id, user.id, type, runningContest.id);
     }
 }
 
@@ -136,7 +142,7 @@ async function handleSpecificMessageReactionRemoved(
         reaction.message.channel instanceof TextChannel &&
         (availableReactions?.includes(reaction.emoji.name ?? '') ||
             availableReactions?.includes(reaction.emoji.id ?? '')) &&
-        await contestManager.isContestRunning()
+        (await contestManager.runningContest())
     ) {
         removeReaction(reaction.message.id, user.id, type);
     }
@@ -146,15 +152,19 @@ async function getSortedLeaderboard(
     top: number,
     type: string
 ): Promise<{ messageId: string; reactions: number }[]> {
-    const leaderboard = await getLeaderboard(type);
+    const runningContest = await contestManager.runningContest();
 
-    const sortedLeaderboard = leaderboard.slice(0, top)
-        .map(entry => ({
+    if (runningContest) {
+        const leaderboard = await getLeaderboard(type, runningContest.id);
+        const sortedLeaderboard = leaderboard.slice(0, top).map(entry => ({
             messageId: entry.messageId,
             reactions: entry.count,
         }));
 
-    return sortedLeaderboard;
+        return sortedLeaderboard;
+    }
+
+    throw new Error('Not active contest!');
 }
 
 interface MessageOptions {
