@@ -14,8 +14,10 @@
         "clean": "git clean -xdf --exclude=\"/config/**/*\"",
         "clean:dry": "git clean -xdf --exclude=\"/config/**/*\" --dry-run",
         "build": "tsc --project tsconfig.json",
-        "start": "npx ts-node src/register-commands.ts && npm run start:bot",
-        "start:bot": "npm run build && node --enable-source-maps dist/index.js"
+        "start": "pnpx ts-node src/register-commands.ts && npm run start:bot",
+        "start:bot": "pnpm run build && node --enable-source-maps dist/index.js",
+        "preinstall": "npx only-allow pnpm"
+
     },
     "devDependencies": {
         "@types/better-sqlite3": "^7.6.10",
