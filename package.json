@@ -7,6 +7,7 @@
         "./dist/index.js"
     ],
     "scripts": {
+        "preinstall": "npx only-allow pnpm",
         "lint": "eslint . --cache --ext .js,.jsx,.ts,.tsx",
         "lint:fix": "eslint . --fix --cache --ext .js,.jsx,.ts,.tsx",
         "format": "prettier --check .",
@@ -14,9 +15,9 @@
         "clean": "git clean -xdf --exclude=\"/config/**/*\"",
         "clean:dry": "git clean -xdf --exclude=\"/config/**/*\" --dry-run",
         "build": "tsc --project tsconfig.json",
-        "start": "pnpx ts-node src/register-commands.ts && npm run start:bot",
-        "start:bot": "pnpm run build && node --enable-source-maps dist/index.js",
-        "preinstall": "npx only-allow pnpm"
+        "start": "pnpx ts-node src/register-commands.ts && pnpm run start:bot",
+        "start:bot": "pnpm run build && node --enable-source-maps dist/index.js"
+
 
     },
     "devDependencies": {
