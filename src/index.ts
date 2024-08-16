@@ -87,10 +87,10 @@ client.on(Events.InteractionCreate, async interaction => {
                 await interaction.reply('Ganadores anunciados!');
             }
             if (winners.length > 0) {
-                await announceWinner(winners, 'Meme de la semana');
+                await announceWinner(winners, 'meme');
             }
             if (bones.length > 0) {
-                await announceWinner(bones, 'Hueso de la semana');
+                await announceWinner(bones, 'bone');
             }
         }
     } catch (error) {
@@ -172,9 +172,11 @@ interface MessageOptions {
     files?: string[];
 }
 
+type Contest = 'bone' | 'meme';
+
 async function announceWinner(
     winners: { messageId: string; reactions: number }[],
-    contest: string
+    contestType: Contest
 ): Promise<void> {
     if (!process.env.MEME_CHANNEL_ID) {
         console.error('MEME_CHANNEL_ID is not set in the environment variables');
@@ -185,15 +187,18 @@ async function announceWinner(
         process.env.MEME_CHANNEL_ID
     )) as TextChannel;
 
+    const emoji = contestType === 'meme' ? '🎉' : '🦴';
+    const contest = contestType === 'meme' ? 'Meme de la semana' : 'Hueso de la semana';
+
     for (const [index, winner] of winners.entries()) {
         const winnerMessage = await announcementChannel.messages.fetch(winner.messageId);
         const winnerLink = winnerMessage.url;
         const messageOptions: MessageOptions = {
-            content: `🎉 Felicitaciones, ${winnerMessage.author}! Tu post ha ganado el #${
+            content: `${emoji} Felicitaciones, ${winnerMessage.author}! Tu post ha ganado el #${
                 index + 1
             } puesto al "${contest}" con ${
                 winner.reactions
-            } reacciones. #LaPlazaRulez!. Link: ${winnerLink} 🎉`,
+            } reacciones. #LaPlazaRulez!. Link: ${winnerLink} ${emoji}`,
         };
 
         const attachmentUrl = winnerMessage.attachments.first()?.url;
