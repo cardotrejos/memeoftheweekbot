@@ -26,14 +26,6 @@ if (!guildId) {
 
 const commands = [
     new SlashCommandBuilder()
-        .setName('startcontest')
-        .setDescription('Comienza el concurso de memes'),
-    new SlashCommandBuilder()
-        .setName('winner')
-        .setDescription(
-            'Anuncia el ganador del concurso de memes, contando las reacciones predefinidas'
-        ),
-    new SlashCommandBuilder()
         .setName('gettop')
         .setDescription('Anuncia el ganador scrapeando los mensajes con más reacciones'),
 ].map(command => command.toJSON());
