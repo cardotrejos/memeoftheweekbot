@@ -30,6 +30,7 @@ const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
         GatewayIntentBits.GuildMessageReactions,
     ],
 });
@@ -102,7 +103,11 @@ client.on(Events.InteractionCreate, async interaction => {
         }
     } catch (error) {
         console.error(error);
-        await interaction.reply('There was an error while executing this command!');
+        if (interaction.deferred || interaction.replied) {
+            await interaction.editReply('There was an error while executing this command!');
+        } else {
+            await interaction.reply('There was an error while executing this command!');
+        }
     }
 });
 
@@ -237,6 +242,7 @@ async function processMessages(interaction: CommandInteraction) {
     // Calculate date range from last Friday at 12 PM to today
     const today = dayjs().endOf('day');
     const lastFriday = getLastFridayAtNoon();
+    console.log(`Fetching messages from ${lastFriday.toISOString()} to ${today.toISOString()}`);
 
     // Fetch messages within the date range
     const allMessages = await fetchMessagesInRange(channel, lastFriday, today);
@@ -253,6 +259,9 @@ async function processMessages(interaction: CommandInteraction) {
     // Announce winners
     await announceWinners(interaction, topMemes, 'meme');
     await announceWinners(interaction, topBones, 'bone');
+
+
+    await interaction.editReply('Ganadores anunciados!');
 }
 
 function getLastFridayAtNoon() {
@@ -268,20 +277,26 @@ async function fetchMessagesInRange(channel: TextChannel, startDate: string | nu
     let messages = [];
     let lastMessageId: string | undefined;
     let hasMoreMessages = true;
+    let iteration = 0;
+
     while (hasMoreMessages) {
+        console.log(`Fetching messages, iteration ${iteration}`);
         const options: { limit: number; before?: string } = { limit: 100 };
         if (lastMessageId) options.before = lastMessageId;
 
         const fetchedMessages = await channel.messages.fetch(options);
+        console.log(`Fetched ${fetchedMessages.size} messages`);
+
         if (fetchedMessages.size === 0) {
             hasMoreMessages = false;
             break;
         }
 
-        const filteredMessages = fetchedMessages.filter((msg: { createdAt: string | number | Date | dayjs.Dayjs | null | undefined; }) => {
+        const filteredMessages = fetchedMessages.filter((msg) => {
             const msgDate = dayjs(msg.createdAt);
             return msgDate.isBetween(startDate, endDate, null, '[)');
         });
+        console.log(`Filtered ${filteredMessages.size} messages in date range`);
 
         messages.push(...filteredMessages.values());
 
@@ -289,9 +304,15 @@ async function fetchMessagesInRange(channel: TextChannel, startDate: string | nu
 
         // Stop if the oldest message is before the start date
         const oldestMessageDate = dayjs(fetchedMessages.last()?.createdAt);
-        if (oldestMessageDate.isBefore(startDate)) break;
+        if (oldestMessageDate.isBefore(startDate)) {
+            console.log('Oldest message is before start date, breaking loop');
+            break;
+        }
+
+        iteration++;
     }
 
+    console.log(`Total messages collected: ${messages.length}`);
     return messages;
 }
 
