@@ -2,7 +2,9 @@
 import dayjs from 'dayjs';
 import isBetween from 'dayjs/plugin/isBetween';
 import {
+    CacheType,
     Client,
+    CommandInteraction,
     Events,
     GatewayIntentBits,
     MessageReaction,
@@ -209,18 +211,21 @@ async function announceWinner(
         const attachmentUrl = winnerMessage.attachments.first()?.url;
 
         if (attachmentUrl) {
-            messageOptions['files'] = [attachmentUrl];
+            messageOptions.files = [attachmentUrl];
         }
 
         await announcementChannel.send(messageOptions);
     }
 }
 
-async function processMessages(interaction: { editReply: (arg0: string) => any; }) {
-    // Fetch the channel
+async function processMessages(interaction: CommandInteraction) {
+    // Defer the reply to allow time for processing
+    await interaction.deferReply();
+
+    // Fetch the channel using the ID from your environment variables
     const channelId = process.env.MEME_CHANNEL_ID;
     if (!channelId) {
-        await interaction.editReply('Channel ID is not set.');
+        await interaction.editReply('Channel ID is not set in the environment variables.');
         return;
     }
     const channel = client.channels.cache.get(channelId) as TextChannel;
@@ -229,11 +234,11 @@ async function processMessages(interaction: { editReply: (arg0: string) => any; 
         return;
     }
 
-    // Calculate date range
+    // Calculate date range from last Friday at 12 PM to today
     const today = dayjs().endOf('day');
     const lastFriday = getLastFridayAtNoon();
 
-    // Fetch messages
+    // Fetch messages within the date range
     const allMessages = await fetchMessagesInRange(channel, lastFriday, today);
 
     if (allMessages.length === 0) {
@@ -244,11 +249,13 @@ async function processMessages(interaction: { editReply: (arg0: string) => any; 
     // Process messages to count reactions
     const topMemes = getTopMessages(allMessages, LAUGH_EMOJIS);
     const topBones = getTopMessages(allMessages, BONE_EMOJI);
-    const followUpInteraction = { followUp: interaction.editReply };
 
     // Announce winners
-    await announceWinners(followUpInteraction, topMemes, 'meme');
-    await announceWinners(followUpInteraction, topBones, 'bone');
+    await announceWinners(interaction, topMemes, 'meme');
+    await announceWinners(interaction, topBones, 'bone');
+
+    // Edit the initial reply to indicate completion
+    await interaction.editReply('Ganadores anunciados!');
 }
 
 function getLastFridayAtNoon() {
@@ -315,8 +322,9 @@ function getTopMessages(messages: any[], reactionEmojis: string | any[]) {
     return messagesWithReactions.slice(0, 3);
 }
 
-async function announceWinners(interaction: { followUp: (arg0: string) => any; }, winners: any[], contestType: string) {
+async function announceWinners(interaction: CommandInteraction<CacheType>, winners: any[], contestType: string) {
     if (winners.length === 0) {
+        // Since we've deferred the reply, we can use followUp
         await interaction.followUp(`No winners found for ${contestType}.`);
         return;
     }
@@ -331,12 +339,7 @@ async function announceWinners(interaction: { followUp: (arg0: string) => any; }
             content: `${emoji} Felicitaciones, ${message.author}! Tu post ha ganado el #${index + 1} puesto al "${contestName}" con ${count} reacciones. #LaPlazaRulez! Link: ${winnerLink} ${emoji}`,
         };
 
-        const attachmentUrl = message.attachments.first()?.url;
-
-        if (attachmentUrl) {
-            (messageOptions as MessageOptions).files = [attachmentUrl];
-        }
-
-        await interaction.followUp(messageOptions.content);
+        // Use followUp since the interaction has been deferred
+        await interaction.followUp(messageOptions);
     }
 }
