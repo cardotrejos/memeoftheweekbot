@@ -244,12 +244,15 @@ async function processMessages(interaction: CommandInteraction) {
     }
 
     // Calculate date range from last Friday at 12 PM to today at 12 PM in Colombia time
-    const today = dayjs().tz('America/Bogota').hour(12).minute(0).second(0).millisecond(0);
+    const now = dayjs().tz('America/Bogota');
     const lastFriday = getLastFridayAtNoon();
-    console.log(`Fetching messages from ${lastFriday.format()} to ${today.format()}`);
+    const thisFriday = lastFriday.add(7, 'day');
 
-    // Fetch messages within the date range
-    const allMessages = await fetchMessagesInRange(channel, lastFriday, today);
+    const endDate = now.isBefore(thisFriday) ? now : thisFriday;
+
+    console.log(`Fetching messages from ${lastFriday.format()} to ${endDate.format()}`);
+
+    const allMessages = await fetchMessagesInRange(channel, lastFriday, endDate);
 
     if (allMessages.length === 0) {
         await interaction.followUp('No messages found in the specified date range.');
@@ -270,17 +273,18 @@ async function processMessages(interaction: CommandInteraction) {
 
 function getLastFridayAtNoon() {
     // Get the current date and time in Colombia time zone
-    let date = dayjs().tz('America/Bogota');
+    const now = dayjs().tz('America/Bogota');
 
-    // Move to this week's Friday at 12 PM
-    date = date.day(5).hour(12).minute(0).second(0).millisecond(0);
+    // Get last Friday at 12 PM
+    let lastFriday = now.day(-2).hour(12).minute(0).second(0).millisecond(0);
 
-    if (date.isAfter(dayjs().tz('America/Bogota'))) {
-        // If we haven't reached this week's Friday at 12 PM yet, go to last week's Friday
-        date = date.subtract(1, 'week');
+    // If today is after last Friday at 12 PM, and before this Friday at 12 PM
+    if (now.isBefore(lastFriday)) {
+        // Subtract one week to get the previous Friday
+        lastFriday = lastFriday.subtract(1, 'week');
     }
 
-    return date;
+    return lastFriday;
 }
 
 async function fetchMessagesInRange(channel: TextChannel, startDate: string | number | Date | dayjs.Dayjs | null | undefined, endDate: string | number | Date | dayjs.Dayjs | null | undefined) {
