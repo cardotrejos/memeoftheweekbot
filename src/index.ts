@@ -253,9 +253,6 @@ async function processMessages(interaction: CommandInteraction) {
     // Announce winners
     await announceWinners(interaction, topMemes, 'meme');
     await announceWinners(interaction, topBones, 'bone');
-
-    // Edit the initial reply to indicate completion
-    await interaction.editReply('Ganadores anunciados!');
 }
 
 function getLastFridayAtNoon() {
