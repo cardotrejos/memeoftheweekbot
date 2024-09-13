@@ -33,6 +33,9 @@ const commands = [
         .setDescription(
             'Anuncia el ganador del concurso de memes, contando las reacciones predefinidas'
         ),
+    new SlashCommandBuilder()
+        .setName('gettop')
+        .setDescription('Anuncia el ganador scrapeando los mensajes con más reacciones'),
 ].map(command => command.toJSON());
 
 const rest = new REST({ version: '9' }).setToken(token);

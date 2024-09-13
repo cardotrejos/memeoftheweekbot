@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/explicit-function-return-type */
 import dayjs from 'dayjs';
 import isBetween from 'dayjs/plugin/isBetween';
 import {
@@ -42,6 +43,7 @@ const BONE_EMOJI = ['🦴'];
 
 const START_CONTEST_COMMAND = 'startcontest';
 const WINNER_COMMAND = 'winner';
+const SCRAP_MESSAGES_COMMAND = 'gettop';
 
 client.login(process.env.DISCORD_BOT_TOKEN);
 
@@ -92,6 +94,9 @@ client.on(Events.InteractionCreate, async interaction => {
             if (bones.length > 0) {
                 await announceWinner(bones, 'bone');
             }
+        } else if (commandName === SCRAP_MESSAGES_COMMAND) {
+            await interaction.reply('Processing messages, please wait...');
+            await processMessages(interaction);
         }
     } catch (error) {
         console.error(error);
@@ -169,7 +174,7 @@ async function getSortedLeaderboard(
 
 interface MessageOptions {
     content: string;
-    files?: string[];
+    files?: string[]; // Ensure this line is present
 }
 
 type Contest = 'bone' | 'meme';
@@ -208,5 +213,130 @@ async function announceWinner(
         }
 
         await announcementChannel.send(messageOptions);
+    }
+}
+
+async function processMessages(interaction: { editReply: (arg0: string) => any; }) {
+    // Fetch the channel
+    const channelId = process.env.MEME_CHANNEL_ID;
+    if (!channelId) {
+        await interaction.editReply('Channel ID is not set.');
+        return;
+    }
+    const channel = client.channels.cache.get(channelId) as TextChannel;
+    if (!channel) {
+        await interaction.editReply('Channel not found.');
+        return;
+    }
+
+    // Calculate date range
+    const today = dayjs().endOf('day');
+    const lastFriday = getLastFridayAtNoon();
+
+    // Fetch messages
+    const allMessages = await fetchMessagesInRange(channel, lastFriday, today);
+
+    if (allMessages.length === 0) {
+        await interaction.editReply('No messages found in the specified date range.');
+        return;
+    }
+
+    // Process messages to count reactions
+    const topMemes = getTopMessages(allMessages, LAUGH_EMOJIS);
+    const topBones = getTopMessages(allMessages, BONE_EMOJI);
+    const followUpInteraction = { followUp: interaction.editReply };
+
+    // Announce winners
+    await announceWinners(followUpInteraction, topMemes, 'meme');
+    await announceWinners(followUpInteraction, topBones, 'bone');
+}
+
+function getLastFridayAtNoon() {
+    let date = dayjs().day(5).hour(12).minute(0).second(0).millisecond(0); // Friday at 12 PM
+    if (date.isAfter(dayjs())) {
+        // If today is before this week's Friday at 12 PM, go to last week's Friday
+        date = date.subtract(1, 'week');
+    }
+    return date;
+}
+
+async function fetchMessagesInRange(channel: TextChannel, startDate: string | number | Date | dayjs.Dayjs | null | undefined, endDate: string | number | Date | dayjs.Dayjs | null | undefined) {
+    let messages = [];
+    let lastMessageId: string | undefined;
+    let hasMoreMessages = true;
+    while (hasMoreMessages) {
+        const options: { limit: number; before?: string } = { limit: 100 };
+        if (lastMessageId) options.before = lastMessageId;
+
+        const fetchedMessages = await channel.messages.fetch(options);
+        if (fetchedMessages.size === 0) {
+            hasMoreMessages = false;
+            break;
+        }
+
+        const filteredMessages = fetchedMessages.filter((msg: { createdAt: string | number | Date | dayjs.Dayjs | null | undefined; }) => {
+            const msgDate = dayjs(msg.createdAt);
+            return msgDate.isBetween(startDate, endDate, null, '[)');
+        });
+
+        messages.push(...filteredMessages.values());
+
+        lastMessageId = fetchedMessages.last()?.id;
+
+        // Stop if the oldest message is before the start date
+        const oldestMessageDate = dayjs(fetchedMessages.last()?.createdAt);
+        if (oldestMessageDate.isBefore(startDate)) break;
+    }
+
+    return messages;
+}
+
+function getTopMessages(messages: any[], reactionEmojis: string | any[]) {
+    const messageReactionCounts = messages.map((message: { reactions: { cache: any[]; }; }) => {
+        const count = message.reactions.cache.reduce((acc: number, reaction: { emoji: { name: any; id: any; }; count: number; }) => {
+            if (
+                reactionEmojis.includes(reaction.emoji.name) ||
+                reactionEmojis.includes(reaction.emoji.id)
+            ) {
+                return acc + reaction.count;
+            }
+            return acc;
+        }, 0);
+        return { message, count };
+    });
+
+    // Filter out messages with zero reactions
+    const messagesWithReactions = messageReactionCounts.filter((item: { count: number; }) => item.count > 0);
+
+    // Sort messages by reaction count in descending order
+    messagesWithReactions.sort((a: { count: number; }, b: { count: number; }) => b.count - a.count);
+
+    // Get top 3 messages
+    return messagesWithReactions.slice(0, 3);
+}
+
+async function announceWinners(interaction: { followUp: (arg0: string) => any; }, winners: any[], contestType: string) {
+    if (winners.length === 0) {
+        await interaction.followUp(`No winners found for ${contestType}.`);
+        return;
+    }
+
+    const emoji = contestType === 'meme' ? '🎉' : '🦴';
+    const contestName = contestType === 'meme' ? 'Meme de la semana' : 'Hueso de la semana';
+
+    for (const [index, winnerData] of winners.entries()) {
+        const { message, count } = winnerData;
+        const winnerLink = message.url;
+        const messageOptions = {
+            content: `${emoji} Felicitaciones, ${message.author}! Tu post ha ganado el #${index + 1} puesto al "${contestName}" con ${count} reacciones. #LaPlazaRulez! Link: ${winnerLink} ${emoji}`,
+        };
+
+        const attachmentUrl = message.attachments.first()?.url;
+
+        if (attachmentUrl) {
+            (messageOptions as MessageOptions).files = [attachmentUrl];
+        }
+
+        await interaction.followUp(messageOptions.content);
     }
 }
