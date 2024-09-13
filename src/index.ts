@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 import dayjs from 'dayjs';
 import isBetween from 'dayjs/plugin/isBetween';
+import timezone from 'dayjs/plugin/timezone';
+import utc from 'dayjs/plugin/utc';
 import {
     CacheType,
     Client,
@@ -26,6 +28,10 @@ import {
 dotenv.config();
 
 dayjs.extend(isBetween);
+dayjs.extend(utc);
+dayjs.extend(timezone);
+dayjs.tz.setDefault('America/Bogota');
+
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -224,31 +230,29 @@ async function announceWinner(
 }
 
 async function processMessages(interaction: CommandInteraction) {
-    // Defer the reply to allow time for processing
-    // await interaction.deferReply();
-
+    // Since we've already replied, we don't need to defer the reply
     // Fetch the channel using the ID from your environment variables
     const channelId = process.env.MEME_CHANNEL_ID;
     if (!channelId) {
-        await interaction.editReply('Channel ID is not set in the environment variables.');
+        await interaction.followUp('Channel ID is not set in the environment variables.');
         return;
     }
     const channel = client.channels.cache.get(channelId) as TextChannel;
     if (!channel) {
-        await interaction.editReply('Channel not found.');
+        await interaction.followUp('Channel not found.');
         return;
     }
 
-    // Calculate date range from last Friday at 12 PM to today
-    const today = dayjs().endOf('day');
+    // Calculate date range from last Friday at 12 PM to today at 12 PM in Colombia time
+    const today = dayjs().tz('America/Bogota').hour(12).minute(0).second(0).millisecond(0);
     const lastFriday = getLastFridayAtNoon();
-    console.log(`Fetching messages from ${lastFriday.toISOString()} to ${today.toISOString()}`);
+    console.log(`Fetching messages from ${lastFriday.format()} to ${today.format()}`);
 
     // Fetch messages within the date range
     const allMessages = await fetchMessagesInRange(channel, lastFriday, today);
 
     if (allMessages.length === 0) {
-        await interaction.editReply('No messages found in the specified date range.');
+        await interaction.followUp('No messages found in the specified date range.');
         return;
     }
 
@@ -260,16 +264,22 @@ async function processMessages(interaction: CommandInteraction) {
     await announceWinners(interaction, topMemes, 'meme');
     await announceWinners(interaction, topBones, 'bone');
 
-
+    // Send a final follow-up message if needed
     await interaction.followUp('Ganadores anunciados!');
 }
 
 function getLastFridayAtNoon() {
-    let date = dayjs().day(5).hour(12).minute(0).second(0).millisecond(0); // Friday at 12 PM
-    if (date.isAfter(dayjs())) {
-        // If today is before this week's Friday at 12 PM, go to last week's Friday
+    // Get the current date and time in Colombia time zone
+    let date = dayjs().tz('America/Bogota');
+
+    // Move to this week's Friday at 12 PM
+    date = date.day(5).hour(12).minute(0).second(0).millisecond(0);
+
+    if (date.isAfter(dayjs().tz('America/Bogota'))) {
+        // If we haven't reached this week's Friday at 12 PM yet, go to last week's Friday
         date = date.subtract(1, 'week');
     }
+
     return date;
 }
 
