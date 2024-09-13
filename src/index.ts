@@ -225,7 +225,7 @@ async function announceWinner(
 
 async function processMessages(interaction: CommandInteraction) {
     // Defer the reply to allow time for processing
-    await interaction.deferReply();
+    // await interaction.deferReply();
 
     // Fetch the channel using the ID from your environment variables
     const channelId = process.env.MEME_CHANNEL_ID;
@@ -261,7 +261,7 @@ async function processMessages(interaction: CommandInteraction) {
     await announceWinners(interaction, topBones, 'bone');
 
 
-    await interaction.editReply('Ganadores anunciados!');
+    await interaction.followUp('Ganadores anunciados!');
 }
 
 function getLastFridayAtNoon() {
