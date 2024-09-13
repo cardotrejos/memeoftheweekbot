@@ -354,24 +354,39 @@ function getTopMessages(messages: any[], reactionEmojis: string | any[]) {
     return messagesWithReactions.slice(0, 3);
 }
 
-async function announceWinners(interaction: CommandInteraction<CacheType>, winners: any[], contestType: string) {
+async function announceWinners(
+    interaction: CommandInteraction<CacheType>,
+    winners: any[],
+    contestType: string
+) {
     if (winners.length === 0) {
-        // Since we've deferred the reply, we can use followUp
         await interaction.followUp(`No winners found for ${contestType}.`);
         return;
     }
 
     const emoji = contestType === 'meme' ? '🎉' : '🦴';
-    const contestName = contestType === 'meme' ? 'Meme de la semana' : 'Hueso de la semana';
+    const contestName =
+        contestType === 'meme' ? 'Meme de la semana' : 'Hueso de la semana';
+
+    let messageContent = `${emoji} **Ganadores del "${contestName}"** ${emoji}\n\n`;
+    const attachments: { attachment: string; name: string }[] = [];
 
     for (const [index, winnerData] of winners.entries()) {
         const { message, count } = winnerData;
         const winnerLink = message.url;
-        const messageOptions = {
-            content: `${emoji} Felicitaciones, ${message.author}! Tu post ha ganado el #${index + 1} puesto al "${contestName}" con ${count} reacciones. #LaPlazaRulez! Link: ${winnerLink} ${emoji}`,
-        };
+        const line = `**#${index + 1}** - Felicitaciones, ${message.author}! Tu post ha ganado con ${count} reacciones. [Ver mensaje](${winnerLink})`;
+        messageContent += line + '\n';
 
-        // Use followUp since the interaction has been deferred
-        await interaction.followUp(messageOptions);
+        // Collect attachments
+        const attachment = message.attachments.first();
+        if (attachment) {
+            attachments.push({ attachment: attachment.url, name: attachment.name });
+        }
     }
+
+    const messageOptions: MessageOptions = {
+        content: messageContent,
+    };
+
+    await interaction.followUp(messageOptions);
 }
