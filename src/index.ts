@@ -31,20 +31,14 @@ const client = new Client({
     ],
 });
 const LAUGH_EMOJIS = [
-    'e17451fcdbba5089cb76', // :rofl:
-    'af51e8d03e05a1c14355', // :joy:
-    '956966036354265180',  // :pepehardlaugh:
-    '974777892418519081', // :doggokek:
-    '954075635310035024', // :kekw:
-    '956966037063106580', // :pepelaugh:
-    '58a496c6d67a070ade5c', // :first_place:
-    'ff052fe58b3e30716221', // :second_place:
-    '6845b8532e3f672959c4', // :third_place:
+    '🤣',
+    '😂',
+    '974777892418519081',
+    '956966036354265180',
+    '954075635310035024',
+    '930549056466485298',
 ];
-const BONE_EMOJIS = [
-    '1a81cecf91614ecada82', // :bone:
-    'ca106978dc4a463ec587', // :meat_on_bone:
-];
+const BONE_EMOJI = ['🦴'];
 
 const START_CONTEST_COMMAND = 'startcontest';
 const WINNER_COMMAND = 'winner';
@@ -72,7 +66,7 @@ class ContestManager {
 const contestManager = new ContestManager();
 
 client.once('ready', () => {
-    console.log('¡El bot está listo!');
+    console.log('Bot is ready!');
 });
 
 client.on(Events.InteractionCreate, async interaction => {
@@ -83,17 +77,14 @@ client.on(Events.InteractionCreate, async interaction => {
     try {
         if (commandName === START_CONTEST_COMMAND) {
             contestManager.startContest();
-            await interaction.reply('¡El concurso ha comenzado!');
+            await interaction.reply('El concurso ha comenzado!');
         } else if (commandName === WINNER_COMMAND) {
-            const [winners, bones] = await Promise.all([
-                getSortedLeaderboard(3, 'meme'),
-                getSortedLeaderboard(3, 'bone')
-            ]);
-
+            const winners = await getSortedLeaderboard(3, 'meme');
+            const bones = await getSortedLeaderboard(3, 'bone');
             if (winners.length == 0 && bones.length == 0) {
-                await interaction.reply('No ha habido ganadores esta semana.');
+                await interaction.reply('No winners found for this week.');
             } else {
-                await interaction.reply('¡Ganadores anunciados!');
+                await interaction.reply('Ganadores anunciados!');
             }
             if (winners.length > 0) {
                 await announceWinner(winners, 'meme');
@@ -104,18 +95,18 @@ client.on(Events.InteractionCreate, async interaction => {
         }
     } catch (error) {
         console.error(error);
-        await interaction.reply('¡Ha ocurrido un error al ejecutar este comando!');
+        await interaction.reply('There was an error while executing this command!');
     }
 });
 
 client.on(Events.MessageReactionAdd, async (reaction, user) => {
     await handleSpecificMessageReaction(reaction, user, LAUGH_EMOJIS, 'meme');
-    await handleSpecificMessageReaction(reaction, user, BONE_EMOJIS, 'bone');
+    await handleSpecificMessageReaction(reaction, user, BONE_EMOJI, 'bone');
 });
 
 client.on(Events.MessageReactionRemove, async (reaction, user) => {
     await handleSpecificMessageReactionRemoved(reaction, user, LAUGH_EMOJIS, 'meme');
-    await handleSpecificMessageReactionRemoved(reaction, user, BONE_EMOJIS, 'bone');
+    await handleSpecificMessageReactionRemoved(reaction, user, BONE_EMOJI, 'bone');
 });
 
 async function handleSpecificMessageReaction(
@@ -173,7 +164,7 @@ async function getSortedLeaderboard(
         return sortedLeaderboard;
     }
 
-    throw new Error('¡No hay un concurso activo!');
+    throw new Error('Not active contest!');
 }
 
 interface MessageOptions {
@@ -183,23 +174,12 @@ interface MessageOptions {
 
 type Contest = 'bone' | 'meme';
 
-const contestMap = {
-    meme: { name: 'Meme de la semana.', emoji: '🎉' },
-    bone: { name: 'Hueso de la semana.', emoji: '🦴' },
-    default: { name: 'Tipo de concurso no definido.', emoji: '❓' },
-};
-
-function getContestDetails(contestType: Contest): { emoji: string; contestName: string } {
-    const contest = contestMap[contestType] || contestMap.default;
-    return { emoji: contest.emoji, contestName: contest.name };
-}
-
 async function announceWinner(
     winners: { messageId: string; reactions: number }[],
     contestType: Contest
 ): Promise<void> {
     if (!process.env.MEME_CHANNEL_ID) {
-        console.error('MEME_CHANNEL_ID no está configurado en las variables de ambiente.');
+        console.error('MEME_CHANNEL_ID is not set in the environment variables');
         return;
     }
 
@@ -207,17 +187,18 @@ async function announceWinner(
         process.env.MEME_CHANNEL_ID
     )) as TextChannel;
 
-    const { emoji, contestName } = getContestDetails(contestType);
+    const emoji = contestType === 'meme' ? '🎉' : '🦴';
+    const contest = contestType === 'meme' ? 'Meme de la semana' : 'Hueso de la semana';
 
     for (const [index, winner] of winners.entries()) {
         const winnerMessage = await announcementChannel.messages.fetch(winner.messageId);
         const winnerLink = winnerMessage.url;
         const messageOptions: MessageOptions = {
-            content: `${emoji} ¡Felicitaciones, ${winnerMessage.author}! Tu post ha ganado el #${
+            content: `${emoji} Felicitaciones, ${winnerMessage.author}! Tu post ha ganado el #${
                 index + 1
-            } puesto al "${contestName}" con ${
+            } puesto al "${contest}" con ${
                 winner.reactions
-            } reacciones, #LaPlazaRulez Link: ${winnerLink} ${emoji}`,
+            } reacciones. #LaPlazaRulez!. Link: ${winnerLink} ${emoji}`,
         };
 
         const attachmentUrl = winnerMessage.attachments.first()?.url;
@@ -227,6 +208,5 @@ async function announceWinner(
         }
 
         await announcementChannel.send(messageOptions);
-
     }
 }
