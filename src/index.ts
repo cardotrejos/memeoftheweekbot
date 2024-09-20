@@ -29,6 +29,7 @@ const LAUGH_EMOJIS = [
   '974777892418519081', // :doggokek:
   '954075635310035024', // :kekw:
   '956966037063106580', // :pepelaugh:
+  '58a496c6d67a070ade5c', // :first_place:
   // Ensure all emoji IDs are valid strings
 ];
 
