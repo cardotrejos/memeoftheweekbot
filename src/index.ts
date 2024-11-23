@@ -1,3 +1,4 @@
+import { CronJob } from 'cron';
 import dayjs from 'dayjs';
 import isBetween from 'dayjs/plugin/isBetween';
 import timezone from 'dayjs/plugin/timezone';
@@ -49,6 +50,46 @@ client
 
 client.once('ready', () => {
   console.log('Bot is ready!');
+  
+  // Schedule the command to run every Friday at 11:40 AM Bogota time
+  const job = new CronJob(
+    '40 11 * * 5', // cronTime
+    async () => {  // onTick
+      console.log('Running scheduled gettop command...');
+      const guild = client.guilds.cache.first();
+      if (!guild) return;
+
+      const channel = guild.channels.cache.get(process.env.MEME_CHANNEL_ID as string) as TextChannel;
+      if (!channel) return;
+
+      try {
+        const fakeInteraction = {
+          reply: async (msg: string) => {
+            await channel.send(msg);
+          },
+          followUp: async (msg: string | MessageOptions) => {
+            await channel.send(msg);
+          },
+          deferred: false,
+          replied: false,
+          editReply: async (msg: string) => {
+            await channel.send(msg);
+          },
+          isCommand: () => true,
+          commandName: SCRAP_MESSAGES_COMMAND,
+        } as unknown as CommandInteraction;
+
+        await processMessages(fakeInteraction);
+      } catch (error) {
+        console.error('Error in scheduled command:', error);
+      }
+    },
+    null, // onComplete
+    true,  // start
+    'America/Bogota' // timeZone
+  );
+
+  job.start();
 });
 
 client.on(Events.InteractionCreate, async (interaction) => {
