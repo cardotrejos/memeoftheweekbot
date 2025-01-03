@@ -3,7 +3,7 @@ import dayjs from 'dayjs';
 import isBetween from 'dayjs/plugin/isBetween';
 import timezone from 'dayjs/plugin/timezone';
 import utc from 'dayjs/plugin/utc';
-import { Client, CommandInteraction, Events, GatewayIntentBits, Message, MessageOptions, TextChannel } from 'discord.js';
+import { BaseMessageOptions, Client, CommandInteraction, Events, GatewayIntentBits, Message, TextChannel } from 'discord.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -68,7 +68,7 @@ client.once('ready', () => {
           reply: async (msg: string) => {
             await channel.send(msg);
           },
-          followUp: async (msg: string | MessageOptions) => {
+          followUp: async (msg: string | BaseMessageOptions) => {
             await channel.send(msg);
           },
           deferred: false,
@@ -122,11 +122,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
     }
   }
 });
-
-interface MessageOptions {
-  content: string;
-  files?: string[];
-}
 
 async function processMessages(interaction: CommandInteraction): Promise<void> {
   const channelId = process.env.MEME_CHANNEL_ID;
@@ -272,7 +267,7 @@ async function announceWinners(
     }
   }
 
-  const messageOptions: MessageOptions = { content: messageContent };
+  const messageOptions: BaseMessageOptions = { content: messageContent };
   if (attachments.length > 0) {
     messageOptions.files = attachments.map((a) => a.attachment);
   }
