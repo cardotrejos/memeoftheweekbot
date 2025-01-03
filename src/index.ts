@@ -109,7 +109,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       const messages = await fetchMessagesInRange(channel, startDate, endDate);
       const winners = getTopMessages(messages, LAUGH_EMOJIS);
       
-      await announceWinners(interaction, winners, 'Meme of the Year 2024 🏆');
+      await announceYearWinners(interaction, winners);
     }
   } catch (error) {
     console.error('Error processing command:', error);
@@ -272,5 +272,30 @@ async function announceWinners(
     messageOptions.files = attachments.map((a) => a.attachment);
   }
 
+  await interaction.followUp(messageOptions);
+}
+
+async function announceYearWinners(
+  interaction: CommandInteraction,
+  winners: { message: Message; count: number }[]
+): Promise<void> {
+  if (winners.length === 0) {
+    await interaction.followUp('No se encontraron memes para el año 2024 😢');
+    return;
+  }
+
+  let messageContent = `🏆 **LOS MEJORES MEMES DEL 2024** 🏆\n\n`;
+
+  for (const [index, winnerData] of winners.entries()) {
+    const { message, count } = winnerData;
+    const medal = index === 0 ? '👑' : index === 1 ? '🥈' : '🥉';
+    const winnerLink = message.url;
+    const line = `${medal} **${index + 1}° Lugar** - ¡Felicitaciones ${message.author}! Tu meme alcanzó ${count} reacciones\n${winnerLink}\n`;
+    messageContent += line + '\n';
+  }
+
+  messageContent += '¡Gracias a todos por otro año lleno de risas! 🎉';
+
+  const messageOptions: BaseMessageOptions = { content: messageContent };
   await interaction.followUp(messageOptions);
 }
