@@ -26,13 +26,18 @@ const LAUGH_EMOJIS = [
   '🤣',
   '😂',
   '🥇',
-  '930549056466485298',
+  '930549056466485298', // :pepehardlaugh:
   '956966036354265180', // :pepehardlaugh:
   '974777892418519081', // :doggokek:
   '954075635310035024', // :kekw:
   '956966037063106580', // :pepelaugh:
-  // Ensure all emoji IDs are valid strings
+  'pepehardlaugh',
+  'doggokek',
+  'kekw',
+  'pepelaugh'
 ];
+
+console.log('Using emoji list:', LAUGH_EMOJIS);
 
 const BONE_EMOJI = ['🦴'];
 
@@ -224,7 +229,8 @@ function getTopMessages(
 ): { message: Message; count: number }[] {
   const messageReactions = messages.map((message) => {
     const reactionCount = message.reactions.cache.reduce((count, reaction) => {
-      if (reactionEmojis.includes(reaction.emoji.name || reaction.emoji.id || '')) {
+      const emojiIdentifier = reaction.emoji.id || reaction.emoji.name || '';
+      if (reactionEmojis.includes(emojiIdentifier)) {
         return count + reaction.count;
       }
       return count;
@@ -232,10 +238,22 @@ function getTopMessages(
     return { message, count: reactionCount };
   });
 
-  return messageReactions
+  // Debug log to check reaction counts
+  const sortedReactions = messageReactions
     .filter((mr) => mr.count > 0)
     .sort((a, b) => b.count - a.count)
     .slice(0, 10);
+
+  console.log('Top messages reactions:', sortedReactions.map(m => ({
+    author: m.message.author?.username,
+    count: m.count,
+    reactions: Array.from(m.message.reactions.cache.values()).map(r => ({
+      emoji: r.emoji.name || r.emoji.id,
+      count: r.count
+    }))
+  })));
+
+  return sortedReactions;
 }
 
 async function announceWinners(
