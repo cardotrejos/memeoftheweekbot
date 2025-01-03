@@ -3,7 +3,7 @@ import dayjs from 'dayjs';
 import isBetween from 'dayjs/plugin/isBetween';
 import timezone from 'dayjs/plugin/timezone';
 import utc from 'dayjs/plugin/utc';
-import { Client, CommandInteraction, Events, GatewayIntentBits, Message, TextChannel } from 'discord.js';
+import { Client, CommandInteraction, Events, GatewayIntentBits, Message, MessageOptions, TextChannel } from 'discord.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -37,6 +37,7 @@ const LAUGH_EMOJIS = [
 const BONE_EMOJI = ['🦴'];
 
 const SCRAP_MESSAGES_COMMAND = 'gettop';
+const MEME_OF_THE_YEAR_COMMAND = 'memeoftheyear';
 
 // Discord Bot Login
 client
@@ -95,19 +96,29 @@ client.once('ready', () => {
 client.on(Events.InteractionCreate, async (interaction) => {
   if (!interaction.isCommand()) return;
 
-  const { commandName } = interaction;
-
-  if (commandName === SCRAP_MESSAGES_COMMAND) {
-    try {
-      await interaction.reply('Processing messages, please wait...');
+  try {
+    if (interaction.commandName === SCRAP_MESSAGES_COMMAND) {
       await processMessages(interaction);
-    } catch (error) {
-      console.error(error);
-      if (interaction.deferred || interaction.replied) {
-        await interaction.editReply('There was an error while executing this command!');
-      } else {
-        await interaction.reply('There was an error while executing this command!');
-      }
+    } else if (interaction.commandName === MEME_OF_THE_YEAR_COMMAND) {
+      await interaction.deferReply();
+      const channel = interaction.channel as TextChannel;
+      
+      const startDate = dayjs.tz('2024-01-01', 'America/Bogota').startOf('day');
+      const endDate = dayjs.tz('2024-12-31', 'America/Bogota').endOf('day');
+      
+      const messages = await fetchMessagesInRange(channel, startDate, endDate);
+      const winners = getTopMessages(messages, LAUGH_EMOJIS);
+      
+      await announceWinners(interaction, winners, 'Meme of the Year 2024 🏆');
+    }
+  } catch (error) {
+    console.error('Error processing command:', error);
+    const errorMessage = 'There was an error processing your command.';
+    
+    if (interaction.deferred) {
+      await interaction.editReply(errorMessage);
+    } else if (!interaction.replied) {
+      await interaction.reply(errorMessage);
     }
   }
 });
