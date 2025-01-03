@@ -222,21 +222,20 @@ function getTopMessages(
   messages: Message[],
   reactionEmojis: string[]
 ): { message: Message; count: number }[] {
-  const messageReactionCounts = messages.map((message) => {
-    const count = message.reactions.cache.reduce((acc, reaction) => {
-      if (reactionEmojis.includes(reaction.emoji.name ?? '') || reactionEmojis.includes(reaction.emoji.id ?? '')) {
-        return acc + reaction.count;
+  const messageReactions = messages.map((message) => {
+    const reactionCount = message.reactions.cache.reduce((count, reaction) => {
+      if (reactionEmojis.includes(reaction.emoji.name || reaction.emoji.id || '')) {
+        return count + reaction.count;
       }
-      return acc;
+      return count;
     }, 0);
-    return { message, count };
+    return { message, count: reactionCount };
   });
 
-  const messagesWithReactions = messageReactionCounts.filter((item) => item.count > 0);
-
-  messagesWithReactions.sort((a, b) => b.count - a.count);
-
-  return messagesWithReactions.slice(0, 3);
+  return messageReactions
+    .filter((mr) => mr.count > 0)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
 }
 
 async function announceWinners(
@@ -288,7 +287,20 @@ async function announceYearWinners(
 
   for (const [index, winnerData] of winners.entries()) {
     const { message, count } = winnerData;
-    const medal = index === 0 ? '👑' : index === 1 ? '🥈' : '🥉';
+    let medal;
+    switch(index) {
+      case 0:
+        medal = '👑';
+        break;
+      case 1:
+        medal = '🥈';
+        break;
+      case 2:
+        medal = '🥉';
+        break;
+      default:
+        medal = '🌟';
+    }
     const winnerLink = message.url;
     const line = `${medal} **${index + 1}° Lugar** - ¡Felicitaciones ${message.author}! Tu meme alcanzó ${count} reacciones\n${winnerLink}\n`;
     messageContent += line + '\n';
