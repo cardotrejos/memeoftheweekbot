@@ -54,7 +54,7 @@ client.once('ready', () => {
   
   // Schedule the command to run every Friday at 11:40 AM Bogota time
   const job = new CronJob(
-    '* * * * *', // cronTime
+    '40 11 * * 5', // cronTime
     async () => {  // onTick
       console.log('Running scheduled gettop command...');
       const guild = client.guilds.cache.first();
