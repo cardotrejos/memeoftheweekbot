@@ -23,10 +23,9 @@ const client = new Client({
 });
 
 const LAUGH_EMOJIS = [
-  '🤣',
-  '😂',
-  '🥇',
-  '930549056466485298',
+  'e17451fcdbba5089cb76', // :rofl:
+  'af51e8d03e05a1c14355', // :joy:
+  '58a496c6d67a070ade5c', // :first_place:
   '956966036354265180', // :pepehardlaugh:
   '974777892418519081', // :doggokek:
   '954075635310035024', // :kekw:
