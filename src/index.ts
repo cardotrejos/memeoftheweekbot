@@ -54,7 +54,7 @@ client.once('ready', () => {
   
   // Schedule the command to run every Friday at 11:40 AM Bogota time
   const job = new CronJob(
-    '40 11 * * 5', // cronTime
+    '* * * * *', // cronTime
     async () => {  // onTick
       console.log('Running scheduled gettop command...');
       const guild = client.guilds.cache.first();
@@ -107,7 +107,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       const endDate = dayjs.tz('2024-12-31', 'America/Bogota').endOf('day');
       
       const messages = await fetchMessagesInRange(channel, startDate, endDate);
-      const winners = getTopMessages(messages, LAUGH_EMOJIS);
+      const winners = await getTopMessages(messages, LAUGH_EMOJIS);
       
       await announceYearWinners(interaction, winners);
     }
@@ -152,8 +152,8 @@ async function processMessages(interaction: CommandInteraction): Promise<void> {
     return;
   }
 
-  const topMemes = getTopMessages(allMessages, LAUGH_EMOJIS);
-  const topBones = getTopMessages(allMessages, BONE_EMOJI);
+  const topMemes = await getTopMessages(allMessages, LAUGH_EMOJIS);
+  const topBones = await getTopMessages(allMessages, BONE_EMOJI);
 
   await announceWinners(interaction, topMemes, 'meme');
   await announceWinners(interaction, topBones, 'bone');
@@ -218,19 +218,26 @@ async function fetchMessagesInRange(
   return messages;
 }
 
-function getTopMessages(
+async function getTopMessages(
   messages: Message[],
   reactionEmojis: string[]
-): { message: Message; count: number }[] {
-  const messageReactionCounts = messages.map((message) => {
-    const count = message.reactions.cache.reduce((acc, reaction) => {
+): Promise<{ message: Message; count: number; }[]> {
+  const messageReactionCounts = await Promise.all(messages.map(async (message) => {
+    const userIdSet = new Set<string>();
+    let count = 0;
+    for (const reaction of message.reactions.cache.values()) {  
       if (reactionEmojis.includes(reaction.emoji.name ?? '') || reactionEmojis.includes(reaction.emoji.id ?? '')) {
-        return acc + reaction.count;
+        const users = await reaction.users.fetch();
+        for (const user of users) {
+          if (!userIdSet.has(user[0])) {
+            count += reaction.count;
+          }
+          userIdSet.add(user[0]);
+        }
       }
-      return acc;
-    }, 0);
+    }
     return { message, count };
-  });
+  }));
 
   const messagesWithReactions = messageReactionCounts.filter((item) => item.count > 0);
 
