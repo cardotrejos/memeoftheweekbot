@@ -224,18 +224,21 @@ async function getTopMessages(
 ): Promise<{ message: Message; count: number; }[]> {
   const messageReactionCounts = await Promise.all(messages.map(async (message) => {
     const userIdSet = new Set<string>();
+    const fetchPromises = [];
     let count = 0;
     for (const reaction of message.reactions.cache.values()) {  
       if (reactionEmojis.includes(reaction.emoji.name ?? '') || reactionEmojis.includes(reaction.emoji.id ?? '')) {
-        const users = await reaction.users.fetch();
-        for (const user of users) {
-          if (!userIdSet.has(user[0])) {
-            count += 1;
-          }
-          userIdSet.add(user[0]);
-        }
+        fetchPromises.push(reaction.users.fetch());
+}}
+  const userLists = await Promise.all(fetchPromises);
+  for (const users of userLists) {
+    for (const user of users) {
+      if (!userIdSet.has(user[0])) {
+        count += 1;
       }
+      userIdSet.add(user[0]);
     }
+}
     return { message, count };
   }));
 
