@@ -230,7 +230,7 @@ async function getTopMessages(
         const users = await reaction.users.fetch();
         for (const user of users) {
           if (!userIdSet.has(user[0])) {
-            count += reaction.count;
+            count += 1;
           }
           userIdSet.add(user[0]);
         }
