@@ -106,7 +106,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       const endDate = dayjs.tz('2024-12-31', 'America/Bogota').endOf('day');
       
       const messages = await fetchMessagesInRange(channel, startDate, endDate);
-      const winners = await getTopMessages(messages, LAUGH_EMOJIS);
+      const winners = getTopMessages(messages, LAUGH_EMOJIS);
       
       await announceYearWinners(interaction, winners);
     }
@@ -151,8 +151,8 @@ async function processMessages(interaction: CommandInteraction): Promise<void> {
     return;
   }
 
-  const topMemes = await getTopMessages(allMessages, LAUGH_EMOJIS);
-  const topBones = await getTopMessages(allMessages, BONE_EMOJI);
+  const topMemes = getTopMessages(allMessages, LAUGH_EMOJIS);
+  const topBones = getTopMessages(allMessages, BONE_EMOJI);
 
   await announceWinners(interaction, topMemes, 'meme');
   await announceWinners(interaction, topBones, 'bone');
@@ -217,29 +217,19 @@ async function fetchMessagesInRange(
   return messages;
 }
 
-async function getTopMessages(
+function getTopMessages(
   messages: Message[],
   reactionEmojis: string[]
-): Promise<{ message: Message; count: number; }[]> {
-  const messageReactionCounts = await Promise.all(messages.map(async (message) => {
-    const userIdSet = new Set<string>();
-    const fetchPromises = [];
-    let count = 0;
-    for (const reaction of message.reactions.cache.values()) {  
+): { message: Message; count: number }[] {
+  const messageReactionCounts = messages.map((message) => {
+    const count = message.reactions.cache.reduce((acc, reaction) => {
       if (reactionEmojis.includes(reaction.emoji.name ?? '') || reactionEmojis.includes(reaction.emoji.id ?? '')) {
-        fetchPromises.push(reaction.users.fetch());
-}}
-  const userLists = await Promise.all(fetchPromises);
-  for (const users of userLists) {
-    for (const user of users) {
-      if (!userIdSet.has(user[0])) {
-        count += 1;
+        return acc + reaction.count;
       }
-      userIdSet.add(user[0]);
-    }
-}
+      return acc;
+    }, 0);
     return { message, count };
-  }));
+  });
 
   const messagesWithReactions = messageReactionCounts.filter((item) => item.count > 0);
 
